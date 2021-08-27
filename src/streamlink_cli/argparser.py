@@ -598,6 +598,16 @@ def build_parser():
         """
     )
     output.add_argument(
+        "-s",
+        help="""
+        Slelce Audio -a 0 ONLY ONE AT A TIME"""
+    )
+    output.add_argument(
+        "-av",
+        help="""
+        Output only audio or video -av audio else -av video"""
+    )
+    output.add_argument(
         "--force-progress",
         action="store_true",
         help="""
