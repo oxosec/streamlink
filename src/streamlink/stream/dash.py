@@ -15,10 +15,11 @@ from streamlink.stream.http import normalize_key, valid_args
 from streamlink.stream.segmented import SegmentedStreamReader, SegmentedStreamWorker, SegmentedStreamWriter
 from streamlink.stream.stream import Stream
 from streamlink.utils import parse_xml
+from streamlink_cli.argparser import build_parser
 from streamlink.utils.l10n import Language
 
 log = logging.getLogger(__name__)
-
+arg = build_parser().parse_args()
 
 class DASHStreamWriter(SegmentedStreamWriter):
     def fetch(self, segment, retries=None):
@@ -188,8 +189,6 @@ class DASHStream(Stream):
 
         # Search for suitable video and audio representations
         for aset in mpd.periods[0].adaptationSets:
-            if aset.contentProtection:
-                raise PluginError("{} is protected by DRM".format(url))
             for rep in aset.representations:
                 if rep.mimeType.startswith("video"):
                     video.append(rep)
@@ -219,7 +218,16 @@ class DASHStream(Stream):
 
         if not lang:
             # filter by the first language that appears
-            lang = audio[0] and audio[0].lang
+            
+            print("Available Languages in DASH audio stream:")
+            print('[sn.]', '[lang]', '[bitrate]')
+            for i in range(len(audio)):
+                print(" %-5s %-7s %-s" % (i, audio[i].lang, "a{:0.0f}k".format(audio[i].bandwidth)))
+            if arg.s == None:
+               lang = audio[0] and audio[0].lang
+            else:
+               l = int(arg.s)
+               lang = audio[l] and audio[l].lang
 
         log.debug("Available languages for DASH audio streams: {0} (using: {1})".format(
             ", ".join(available_languages) or "NONE",
@@ -267,12 +275,12 @@ class DASHStream(Stream):
             audio = DASHStreamReader(self, self.audio_representation.id, self.audio_representation.mimeType)
             audio.open()
 
-        if self.video_representation and self.audio_representation:
-            return FFMPEGMuxer(self.session, video, audio, copyts=True).open()
-        elif self.video_representation:
+        if  arg.av == "video":
             return video
-        elif self.audio_representation:
+        elif arg.av == "audio":
             return audio
+        elif self.video_representation and self.audio_representation:
+            return FFMPEGMuxer(self.session, video, audio, copyts=True).open()
 
     def to_url(self):
         return self.mpd.url
